@@ -16,6 +16,11 @@ import java.net.URL
 private val logger = KotlinLogging.logger {}
 class TgvMaxApi(val auth: Authentification.ApiAuth) {
 
+    enum class Vendor(val vendorName: String) {
+        TRAINLINE("trainline"),
+        OUISNCF("VSC")
+    }
+
     private val client = HttpClient(Apache) {
         defaultRequest {
             header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0")
@@ -23,18 +28,19 @@ class TgvMaxApi(val auth: Authentification.ApiAuth) {
     }
 
     suspend fun confirmTravels() {
-        val nextTravels = nextTravels()
-        nextTravels.forEach { confirmTravel(it) }
+        Vendor.values().forEach { vendor ->
+            logger.info { "Check $vendor travels" }
+            nextTravels(vendor).forEach { confirmTravel(it, vendor) }
+        }
     }
 
-    private suspend fun nextTravels() : List<JsonObject> {
-        val url = "https://www.tgvmax.fr/api/account/${auth.accountId}/travels/future?vendorcode=trainline"
+    private suspend fun nextTravels(vendor: Vendor) : List<JsonObject> {
+        val url = "https://www.tgvmax.fr/api/account/${auth.accountId}/travels/future?vendorcode=${vendor.vendorName}"
         val json = getWithAccessToken(url)
 
         val parser = Parser()
         val jsonObject = parser.parse(StringBuilder(json)) as JsonObject
         travelInfo(jsonObject)
-
         return jsonObject.array<JsonObject>("travels")
             ?.filter { it.obj("noShow")?.boolean("afficherBoutonConfirmer")!! }!!
     }
@@ -46,16 +52,15 @@ class TgvMaxApi(val auth: Authentification.ApiAuth) {
         logger.info { "$travelNumber travels ; $travelToConfirmNumber travels to confirm " }
     }
 
-    private suspend fun confirmTravel(travel: JsonObject) {
+    private suspend fun confirmTravel(travel: JsonObject, vendor: Vendor) {
         val travelId= travel.string("id")!!
-
-        val url = "https://www.tgvmax.fr/api/account/${auth.accountId}/travels/confirm/${travelId}/?vendorcode=trainline"
+        val url = "https://www.tgvmax.fr/api/account/${auth.accountId}/travels/confirm/${travelId}/?vendorcode=${vendor.vendorName}"
         val json = getWithAccessToken(url)
 
         val parser = Parser()
         val jsonObject = parser.parse(StringBuilder(json)) as JsonObject
         travelInfo(jsonObject)
-        //search it and check ifit is verified
+        //search it and check if it's confirmed
         val isOK = jsonObject.array<JsonObject>("travels")
             ?.filter { it.string("id") == travelId }
             ?.all { it.obj("noShow")?.boolean("voyageConfirme")!! } !!

@@ -2,7 +2,7 @@
 
 Tools to confirm TGV Max travels instead of going manually to the following web page : https://www.tgvmax.fr/trainline/fr-FR/reservation
 
-It only works with trainline reservation for now.
+Works with travels from Trainline and Oui.SNCF
 
 ## Usage
 
