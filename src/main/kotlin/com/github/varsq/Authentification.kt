@@ -47,22 +47,16 @@ class Authentification(val login: String, val passwd: String) {
         var nextUrl = login(hiddenField)
         getRequest(nextUrl)
         nextUrl = getRedirect(getRequest(homeUrl).readText())
-
         val landingPage = getRequest(nextUrl).readText()
         val clientID =  getClientId(landingPage)
         val apiKey = getApiKey(landingPage)
-        logger.info { "clientID is $clientID and apiKey is $apiKey" }
-
         val tgvMaxAuth = getRequest("$oauth2UrlStart$clientID$oauth2UrlEnd").readText()
         val code = getCode(getRedirect(tgvMaxAuth))
-        logger.info { "authorization code for Tgv Max API is $code" }
-
         val auth = getRequest("$apiAuthenticateUrl$code", apiKey)
         val accountId = getAccountId(auth.readText())
         return ApiAuth(accountId, apiKey, cookieToString(client.cookies("https://www.tgvmax.fr")))
     }
 
-    //login and return the next url
     private suspend fun login(state: State): String {
         val params = Parameters.build {
             append("loginPage:SiteTemplate:formulaire", "loginPage:SiteTemplate:formulaire")
@@ -74,7 +68,7 @@ class Authentification(val login: String, val passwd: String) {
             append("com.salesforce.visualforce.ViewStateVersion",state.version)
         }
         val url = loginUrl
-        logger.info { "new POST request: $url" }
+        logger.info { "POST : $url" }
         val res = client.submitForm<HttpResponse>(params) {
             url(URL(loginUrl))
             header("Cookie:", cookieToString(client.cookies("https://happycard.force.com")))
@@ -83,7 +77,7 @@ class Authentification(val login: String, val passwd: String) {
     }
 
     private suspend fun getRequest(url: String, apiKey: String = ""): HttpResponse {
-        logger.info { "new GET request: $url" }
+        logger.info { "GET : $url" }
         return client.get<HttpResponse>() {
             url(URL(url))
             header("Cookie:", cookieToString(client.cookies("https://happycard.force.com")))
@@ -92,49 +86,50 @@ class Authentification(val login: String, val passwd: String) {
     }
 
     companion object {
-        fun getAccountId(json: String): String {
-            val parser = Parser()
-            val jsonObject = parser.parse(StringBuilder(json)) as JsonObject
-            val accessToken = jsonObject.string("accessToken")!!
-            val accountId = jsonObject.string("accountId")!!
-            logger.info { "accessToken is $accessToken" } //Saved in cookie, just for log
-            logger.info { "accountId is $accountId" }
-            return accountId
-        }
-
-        fun getRedirect(script: String): String {
-            val startDelimiter = "handleRedirect('"
-            val endDelimiter = "');"
-            val result = script.substringAfter(startDelimiter).substringBefore(endDelimiter)
-            logger.info { "Redirection URL in script is $result" }
-            return result
-        }
-
-        // Get code from url
-        fun getCode(url: String): String {
-            val startDelimiter = "sfauthcallback?code="
-            val endDelimiter = "&state"
-            return url.substringAfter(startDelimiter).substringBefore(endDelimiter)
-        }
-
-        fun getApiKey(landingPage: String): String {
-            val startDelimiter = "apikey\":\""
-            val endDelimiter = "\"}}}"
-            return landingPage.substringAfter(startDelimiter).substringBefore(endDelimiter)
-        }
-
-        fun getClientId(landingPage: String): String {
-            val startDelimiter = """"global.salesforce.authentication.client.id","value":""""
-            val endDelimiter = """"},"""
-            return landingPage.substringAfter(startDelimiter).substringBefore(endDelimiter)
-        }
-
         fun getHiddenFieldFromLoginPage(loginPage: String) : State {
             val doc = Jsoup.parse(loginPage)
             val state = doc.getElementById("com.salesforce.visualforce.ViewState").attr("value")
             val stateMac = doc.getElementById("com.salesforce.visualforce.ViewStateMAC").attr("value")
             val stateVersion = doc.getElementById("com.salesforce.visualforce.ViewStateVersion").attr("value")
+            requireNotNull(state) { "State not found in hidden field from login page"}
+            requireNotNull(stateMac) { "State MAC not found in hidden field from login page"}
+            requireNotNull(stateVersion) { "State Version not found in hidden field from login page"}
             return State(state, stateMac, stateVersion)
+        }
+
+        private fun getInfoFromPage(page: String, start: String, end: String, toFind: String): String {
+            val indexStart = page.indexOf(start) + start.length
+            if (indexStart == -1) { throw IllegalStateException("$toFind not found, start index: $start not found")}
+
+            val indexEnd = page.indexOf(end, startIndex = indexStart)
+            if (indexEnd == -1) { throw IllegalStateException("$toFind not found, end index $end not found")}
+            logger.info { "$toFind found"}
+            return page.substring(indexStart, indexEnd)
+        }
+
+        fun getClientId(landingPage: String): String {
+            return getInfoFromPage(landingPage, """"global.salesforce.authentication.client.id","value":"""", """"},""", "clientID")
+        }
+
+        fun getApiKey(landingPage: String): String {
+            return getInfoFromPage(landingPage, "apikey\":\"","\"}}}", "API key")
+        }
+
+        fun getCode(url: String): String {
+            return getInfoFromPage(url, "sfauthcallback?code=","&state", "Auth Code")
+        }
+
+        fun getRedirect(script: String): String {
+            return getInfoFromPage(script, "handleRedirect('","');", "Redirect")
+        }
+
+        fun getAccountId(json: String): String {
+            val parser = Parser()
+            val jsonObject = parser.parse(StringBuilder(json)) as JsonObject
+            val accountId = jsonObject.string("accountId")
+            requireNotNull(accountId) { "Account ID not found" }
+            logger.info { "Account ID found" }
+            return accountId
         }
 
         fun cookieToString(cookies: List<Cookie>) : String {

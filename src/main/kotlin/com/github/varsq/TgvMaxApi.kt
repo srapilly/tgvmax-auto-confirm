@@ -72,12 +72,12 @@ class TgvMaxApi(val auth: Authentification.ApiAuth) {
             logger.info { "Travel confirmed : $origin -> $destination on $departureTime " }
         }
         else {
-            logger.info { "Error during confirmation of travel" }
+            logger.error { "Error during confirmation of travel" }
         }
     }
 
     private suspend fun getWithAccessToken(url: String): String {
-        logger.info { "GET request: $url" }
+        logger.info { "GET : $url" }
         return client.get<HttpResponse>() {
             url(URL(url))
             header("Cookie:", auth.cookies)
