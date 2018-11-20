@@ -26,9 +26,10 @@ class Authentification(val login: String, val passwd: String) {
     data class ApiAuth(val accountId: String, val apiKey: String, val cookies: String)
     data class State(val value: String, val mac: String, val version: String)
 
-    private val loginUrl = "https://happycard.force.com/SiteLogin"
-    private val homeUrl = "https://happycard.force.com/apex/SiteHome"
-    private val oauth2UrlStart = "https://happycard.force.com/services/oauth2/authorize?response_type=code&client_id="
+    private val baseUrl = "https://happycard.force.com/"
+    private val loginUrl = "${baseUrl}SiteLogin"
+    private val homeUrl = "${baseUrl}apex/SiteHome"
+    private val oauth2UrlStart = "${baseUrl}services/oauth2/authorize?response_type=code&client_id="
     private val oauth2UrlEnd = "&redirect_uri=https://www.tgvmax.fr/sfauthcallback&state=trainline%7Cfr-FR%7C%7Creservation%7Cinitrebon"
     private val apiAuthenticateUrl = "https://www.tgvmax.fr/api/authenticate/token?authorization_code="
 
@@ -43,6 +44,7 @@ class Authentification(val login: String, val passwd: String) {
     }
 
     suspend fun run(): ApiAuth {
+        logger.info { "Starting auth" }
         val hiddenField = getHiddenFieldFromLoginPage(getRequest(loginUrl).readText())
         var nextUrl = login(hiddenField)
         getRequest(nextUrl)
@@ -54,6 +56,7 @@ class Authentification(val login: String, val passwd: String) {
         val code = getCode(getRedirect(tgvMaxAuth))
         val auth = getRequest("$apiAuthenticateUrl$code", apiKey)
         val accountId = getAccountId(auth.readText())
+        logger.info { "Auth done :)" }
         return ApiAuth(accountId, apiKey, cookieToString(client.cookies("https://www.tgvmax.fr")))
     }
 
@@ -68,21 +71,27 @@ class Authentification(val login: String, val passwd: String) {
             append("com.salesforce.visualforce.ViewStateVersion",state.version)
         }
         val url = loginUrl
-        logger.info { "POST : $url" }
+        logger.debug { "POST : $url" }
         val res = client.submitForm<HttpResponse>(params) {
             url(URL(loginUrl))
-            header("Cookie:", cookieToString(client.cookies("https://happycard.force.com")))
+            header("Cookie:", cookieToString(client.cookies(baseUrl)))
         }
+        val validPassword = client.cookies(baseUrl).any { it.name == "oinfo" }
+        require(validPassword) { "Incorrect login/password"}
         return getRedirect(res.readText())
     }
 
     private suspend fun getRequest(url: String, apiKey: String = ""): HttpResponse {
-        logger.info { "GET : $url" }
+        logger.debug { "GET : $url" }
         return client.get<HttpResponse>() {
             url(URL(url))
-            header("Cookie:", cookieToString(client.cookies("https://happycard.force.com")))
+            header("Cookie:", cookieToString(client.cookies(baseUrl)))
             if (apiKey.isNotEmpty()) { header("X-Hpy-ApiKey", apiKey) }
         }
+    }
+
+    private suspend fun cookieFromTgvMax(): List<Cookie> {
+        return client.cookies(baseUrl)
     }
 
     companion object {
@@ -103,8 +112,9 @@ class Authentification(val login: String, val passwd: String) {
 
             val indexEnd = page.indexOf(end, startIndex = indexStart)
             if (indexEnd == -1) { throw IllegalStateException("$toFind not found, end index $end not found")}
-            logger.info { "$toFind found"}
-            return page.substring(indexStart, indexEnd)
+            val info = page.substring(indexStart, indexEnd)
+            logger.debug { "$toFind -> $info"}
+            return info
         }
 
         fun getClientId(landingPage: String): String {
@@ -128,12 +138,14 @@ class Authentification(val login: String, val passwd: String) {
             val jsonObject = parser.parse(StringBuilder(json)) as JsonObject
             val accountId = jsonObject.string("accountId")
             requireNotNull(accountId) { "Account ID not found" }
-            logger.info { "Account ID found" }
+            logger.debug { "Account ID -> $accountId" }
             return accountId
         }
 
         fun cookieToString(cookies: List<Cookie>) : String {
             return cookies.fold("") { acc, cookie -> acc.plus(cookie.name + "=" + cookie.value + ";") }
         }
+
+
     }
 }

@@ -77,7 +77,7 @@ class TgvMaxApi(val auth: Authentification.ApiAuth) {
     }
 
     private suspend fun getWithAccessToken(url: String): String {
-        logger.info { "GET : $url" }
+        logger.debug { "GET : $url" }
         return client.get<HttpResponse>() {
             url(URL(url))
             header("Cookie:", auth.cookies)
