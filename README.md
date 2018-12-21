@@ -2,17 +2,31 @@
 
 Tools to confirm TGV Max travels instead of going manually to the following web page : https://www.tgvmax.fr/trainline/fr-FR/reservation
 
-Works with travels from Trainline and Oui.SNCF
+Works with travels from Trainline and Oui.SNCF !
 
 ## Usage
 
+Zip archive can be found here : https://github.com/varsq/tgvmax-auto-confirm/releases
+
+Unzip the archive, your login/password can be put in the config.properties file located at the root of the archive.
+
 ```
-java -jar java.jar username password
+login=YOURLOGIN
+password=YOURPASSWORD
+```
+
+```
+java -jar tgvmax-auto-confirm-1.1.jar
+```
+
+Login/Password can also be defined directly in the command line, in that case the config.properties file is not used.
+
+```
+java -jar tgvmax-auto-confirm-1.1.jar login password
 ```
 
 The tools only execute one time for now, use a timer to execute it every day for exemple :) (systemd timer/cron on linux, windows task scheduler)
 
-Java Executable can be found here : https://github.com/varsq/tgvmax-auto-confirm/releases
 
 ## Log Example
 
