@@ -8,18 +8,18 @@ Works with travels from Trainline and Oui.SNCF !
 
 Zip archive can be found here : https://github.com/varsq/tgvmax-auto-confirm/releases
 
-Unzip the archive, your login/password can be put in the config.properties file located at the root of the archive.
+Unzip the archive, your login/password can be put in the ```config.properties``` file located at the root of the archive.
 
 ```
 login=YOURLOGIN
 password=YOURPASSWORD
 ```
-
+The tool is then launched with java with the jar located at the root of the archive.
 ```
 java -jar tgvmax-auto-confirm-1.1.jar
 ```
 
-Login/Password can also be defined directly in the command line, in that case the config.properties file is not used.
+Login/Password can also be defined directly in the command line, in that case the ```config.properties``` file is not used.
 
 ```
 java -jar tgvmax-auto-confirm-1.1.jar login password
@@ -44,10 +44,10 @@ INFO  com.github.varsq.TgvMaxApi - 0 travels ; 0 travels to confirm
 ```
 
 Log level can be changed with the system variable ```-DrootLevel```
-```$xslt
+```
 java -DrootLevel="DEBUG" java.jar
 ```
 
 ## Build
 
-This project use Maven, executable jar with all the dependencies can be build with ```mvn package```
+This project use Maven, zip archive with all the dependencies can be build with ```mvn package```
