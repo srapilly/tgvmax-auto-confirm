@@ -22,7 +22,7 @@ import java.net.URL
 
 private val logger = KotlinLogging.logger {}
 
-class Authentification(val login: String, val passwd: String) {
+class Authentification(val login: String, val passwd: String, val notification: Notification?) {
     data class ApiAuth(val accountId: String, val apiKey: String, val cookies: String)
     data class State(val value: String, val mac: String, val version: String)
 
@@ -77,7 +77,10 @@ class Authentification(val login: String, val passwd: String) {
             header("Cookie:", cookieToString(client.cookies(baseUrl)))
         }
         val validPassword = client.cookies(baseUrl).any { it.name == "oinfo" }
-        require(validPassword) { "Incorrect login/password"}
+        require(validPassword) {
+            notification?.sendMessage("Incorrect login/password")
+            "Incorrect login/password"
+        }
         return getRedirect(res.readText())
     }
 

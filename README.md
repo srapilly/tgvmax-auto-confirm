@@ -27,6 +27,27 @@ java -jar tgvmax-auto-confirm-1.1.jar login password
 
 The tools only execute one time for now, use a timer to execute it every day for exemple :) (systemd timer/cron on linux, windows task scheduler)
 
+## Notification
+
+Use a [Matrix](https://matrix.org/blog/home/) room to send notification for:
+
+- Error during auth
+- Confirmation of bookings
+
+Your matrix token and the room ID needs to be put in the  ```config.properties``` file 
+
+```
+login=YOURLOGIN
+password=YOURPASSWORD
+matrix_token=
+matrix_room_id=
+```
+
+Only work with  https://matrix.org homeserver for now.
+
+The token of your matrix account can be found in your account settings  if you use [Riot client](https://riot.im/app/) , the room ID can be found on the room settings.
+
+![alt text](notification.png?raw=true "example")
 
 ## Log Example
 

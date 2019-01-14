@@ -14,7 +14,7 @@ import mu.KotlinLogging
 import java.net.URL
 
 private val logger = KotlinLogging.logger {}
-class TgvMaxApi(val auth: Authentification.ApiAuth) {
+class TgvMaxApi(val auth: Authentification.ApiAuth, val notification: Notification?) {
 
     enum class Vendor(val vendorName: String) {
         TRAINLINE("trainline"),
@@ -70,6 +70,7 @@ class TgvMaxApi(val auth: Authentification.ApiAuth) {
             val destination = travel.obj("destination")?.string("label")!!
             val departureTime = travel.string("departureDateTime")
             logger.info { "Travel confirmed : $origin -> $destination on $departureTime " }
+            notification?.sendMessage("Travel confirmed : $origin -> $destination on $departureTime ")
         }
         else {
             logger.error { "Error during confirmation of travel" }

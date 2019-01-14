@@ -3,10 +3,12 @@ package com.github.varsq
 import kotlinx.coroutines.*
 import java.util.*
 
-fun main(args: Array<String>) {
+suspend fun main(args: Array<String>) {
 
     val login: String
     val password: String
+    var matrixRoom: String? = null
+    var matrixToken: String? = null
 
     if (args.size == 2) {
         login = args[0]
@@ -17,10 +19,19 @@ fun main(args: Array<String>) {
         properties.load(Authentification::class.java.getResourceAsStream("/config.properties"))
         login = properties.getProperty("login")
         password = properties.getProperty("password")
+        matrixToken = properties.getProperty("matrix_token")
+        matrixRoom = properties.getProperty("matrix_room_id")
     }
-    val auth = Authentification(login, password)
+
+    var notification: Notification? = null
+    if (matrixRoom != null && matrixToken != null) {
+        notification = Notification(matrixToken,
+            matrixRoom)
+    }
+
+    val auth = Authentification(login, password, notification)
     runBlocking {
-        val api = TgvMaxApi(auth.run())
+        val api = TgvMaxApi(auth.run(), notification)
         api.confirmTravels()
     }
 }
