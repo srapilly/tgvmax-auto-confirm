@@ -15,7 +15,7 @@
         <kotlin.version>1.3.10</kotlin.version>
         <kotlin.code.style>official</kotlin.code.style>
 
-        <ktor.version>1.0.0-rc</ktor.version>
+        <ktor.version>1.3.1</ktor.version>
         <jsoup.version>1.11.3</jsoup.version>
         <klaxon.version>3.0.1</klaxon.version>
         <kotlin-logging.version>1.6.20</kotlin-logging.version>
